@@ -1,6 +1,5 @@
 terraform {
   required_version = ">= 1.3.0"
-
   required_providers {
     aws = {
       source  = "hashicorp/aws"
@@ -17,9 +16,9 @@ variable "aws_region" {
   default = "ap-south-1"
 }
 
-############################
+################################
 # ECR Repository
-############################
+################################
 resource "aws_ecr_repository" "app" {
   name = "devsecops-demo-app"
 
@@ -32,9 +31,9 @@ output "ecr_repo_url" {
   value = aws_ecr_repository.app.repository_url
 }
 
-############################
-# EKS Cluster
-############################
+################################
+# Networking (Default VPC)
+################################
 data "aws_vpc" "default" {
   default = true
 }
@@ -46,6 +45,9 @@ data "aws_subnets" "default" {
   }
 }
 
+################################
+# EKS Cluster
+################################
 module "eks" {
   source  = "terraform-aws-modules/eks/aws"
   version = "20.31.6"
@@ -56,6 +58,9 @@ module "eks" {
   vpc_id     = data.aws_vpc.default.id
   subnet_ids = data.aws_subnets.default.ids
 
+  ################################
+  # FIX FOR YOUR ERROR (IMPORTANT)
+  ################################
   eks_managed_node_groups = {
     default = {
       desired_size = 1
@@ -63,13 +68,18 @@ module "eks" {
       max_size     = 2
 
       instance_types = ["t3.medium"]
+
+      # 🔑 THIS LINE FIXES THE FAILURE
+      enable_private_networking = true
     }
   }
+
+  enable_cluster_creator_admin_permissions = true
 }
 
-############################
+################################
 # Outputs
-############################
+################################
 output "eks_cluster_name" {
   value = module.eks.cluster_name
 }
