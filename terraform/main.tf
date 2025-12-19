@@ -46,7 +46,7 @@ data "aws_subnets" "private" {
 
   filter {
     name   = "tag:Name"
-    values = ["default-pvt-sub"]
+    values = ["default-pvt-sub", "default-pvt-sub-02"]
   }
 }
 
