@@ -51,14 +51,13 @@ module "eks" {
   vpc_id     = data.aws_vpc.default.id
   subnet_ids = data.aws_subnets.default.ids
 
-  managed_node_groups = {
-    default = {
-      desired_size = 1
-      min_size     = 1
-      max_size     = 2
+eks_managed_node_groups = {
+  default = {
+    desired_size = 1
+    min_size     = 1
+    max_size     = 2
 
-      instance_types = ["t3.medium"]
-    }
+    instance_types = ["t3.medium"]
   }
 }
 output "eks_cluster_name" {
@@ -68,3 +67,4 @@ output "eks_cluster_name" {
 output "eks_cluster_endpoint" {
   value = module.eks.cluster_endpoint
 }
+
