@@ -58,7 +58,8 @@ module "eks" {
   vpc_id     = data.aws_vpc.default.id
   subnet_ids = data.aws_subnets.default.ids
 
-  kms_key_aliases = []   # 👈 this is at module level
+  # Use AWS-managed key to avoid KMS alias conflicts
+  kms_key_id = "alias/aws/eks"
 
   eks_managed_node_groups = {
 
@@ -87,4 +88,3 @@ output "eks_cluster_name" {
 output "eks_cluster_endpoint" {
   value = module.eks.cluster_endpoint
 }
-
