@@ -58,10 +58,10 @@ module "eks" {
   vpc_id     = data.aws_vpc.default.id
   subnet_ids = data.aws_subnets.default.ids
 
-  ################################
-  # FIX FOR YOUR ERROR (IMPORTANT)
-  ################################
+  kms_key_aliases = []   # 👈 this is at module level
+
   eks_managed_node_groups = {
+
     default = {
       desired_size = 1
       min_size     = 1
@@ -87,3 +87,4 @@ output "eks_cluster_name" {
 output "eks_cluster_endpoint" {
   value = module.eks.cluster_endpoint
 }
+
