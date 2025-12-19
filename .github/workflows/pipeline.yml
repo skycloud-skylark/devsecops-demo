@@ -1,36 +1,59 @@
-name: DevSecOps Pipeline
+name: DevSecOps CI/CD Pipeline
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
 
 jobs:
-  build:
+  build-and-deploy:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      # 1Checkout code
+      - name: Checkout Repo
         uses: actions/checkout@v3
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v3
+      # 2️ Set up AWS CLI
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
         with:
-          node-version: 18
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_DEFAULT_REGION }}
 
-      - name: Install dependencies
-        run: npm install
-          
-      - name: Run Snyk dependency scan
-        uses: snyk/actions/node@master
-        env:
-          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+      # 3️Set up Terraform
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
 
-      - name: Build Docker image
-        run: docker build -t devsecops-demo:latest .
-
-      - name: Scan Docker image
-        run: snyk container test devsecops-demo:latest
-
-      - name: Lint Kubernetes manifests
+      # 4 Terraform Init & Apply
+      - name: Terraform Init & Apply
+        working-directory: terraform
         run: |
-          curl -sL https://github.com/zegl/kube-score/releases/download/v1.17.0/kube-score_1.17.0_linux_amd64.tar.gz | tar xz
-          ./kube-score score manifests/*.yaml
+          terraform init
+          terraform apply -auto-approve
+
+      # 5️ Login to ECR
+      - name: Login to AWS ECR
+        id: login-ecr
+        run: |
+          aws ecr get-login-password --region ${{ secrets.AWS_DEFAULT_REGION }} | docker login --username AWS --password-stdin $(terraform output -raw ecr_repo_url)
+
+      # 6️ Build Docker Image
+      - name: Build Docker Image
+        run: |
+          docker build -t devsecops-demo-app:latest app/
+          docker tag devsecops-demo-app:latest $(terraform output -raw ecr_repo_url):latest
+
+      # 7️ Push Docker Image to ECR
+      - name: Push Docker Image
+        run: |
+          docker push $(terraform output -raw ecr_repo_url):latest
+
+      # 8️ Deploy to EKS
+      - name: Configure kubectl
+        run: |
+          aws eks update-kubeconfig --name $(terraform output -raw eks_cluster_name) --region ${{ secrets.AWS_DEFAULT_REGION }}
+
+      - name: Deploy to Kubernetes
+        run: |
+          kubectl apply -f manifests/
