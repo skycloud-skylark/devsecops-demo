@@ -30,26 +30,43 @@ output "ecr_repo_url" {
 }
 
 # EKS Cluster
-module "eks" {
-  source          = "terraform-aws-modules/eks/aws"
-  cluster_name    = "devsecops-demo-eks"
-  cluster_version = "1.30"
-  subnets         = ["subnet-subnet-09fd738e21a8af806", "subnet-06412a02770cabacd"] # use your default VPC subnets
-  vpc_id          = "vpc-055ba3bf4cbb25217"                        # your default VPC
-  manage_aws_auth = true
-  worker_groups = [
-    {
-      instance_type = "t3.medium"
-      asg_desired_capacity = 1
-    }
-  ]
+data "aws_vpc" "default" {
+  default = true
 }
 
+data "aws_subnets" "default" {
+  filter {
+    name   = "vpc-id"
+    values = [data.aws_vpc.default.id]
+  }
+}
+
+module "eks" {
+  source  = "terraform-aws-modules/eks/aws"
+  version = "21.10.1"
+
+  cluster_name    = "devsecops-demo-eks"
+  cluster_version = "1.30"
+
+  vpc_id     = data.aws_vpc.default.id
+  subnet_ids = data.aws_subnets.default.ids
+
+  eks_managed_node_groups = {
+    default = {
+      min_size     = 1
+      max_size     = 2
+      desired_size = 1
+
+      instance_types = ["t3.medium"]
+    }
+  }
+
+  enable_cluster_creator_admin_permissions = true
+}
 output "eks_cluster_name" {
-  value = module.eks.cluster_id
+  value = module.eks.cluster_name
 }
 
 output "eks_cluster_endpoint" {
   value = module.eks.cluster_endpoint
 }
-
