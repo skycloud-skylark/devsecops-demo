@@ -9,11 +9,11 @@ jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
     steps:
-      # 1Checkout code
+      # 1️⃣ Checkout code
       - name: Checkout Repo
         uses: actions/checkout@v3
 
-      # 2️ Set up AWS CLI
+      # 2️⃣ Set up AWS CLI
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v2
         with:
@@ -21,39 +21,47 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_DEFAULT_REGION }}
 
-      # 3️Set up Terraform
+      # 3️⃣ Set up Terraform
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v2
 
-      # 4 Terraform Init & Apply
+      # 4️⃣ Terraform Init & Apply (with state cleanup)
       - name: Terraform Init & Apply
         working-directory: terraform
         run: |
           terraform init
+
+          # 🔹 Remove old resources from Terraform state to prevent AlreadyExists errors
+          terraform state rm aws_ecr_repository.app || true
+          terraform state rm module.eks.module.kms.aws_kms_alias.this["cluster"] || true
+          terraform state rm module.eks.aws_cloudwatch_log_group.this[0] || true
+
+          # 🔹 Apply Terraform
           terraform apply -auto-approve
 
-      # 5️ Login to ECR
+      # 5️⃣ Login to AWS ECR
       - name: Login to AWS ECR
         id: login-ecr
         run: |
           aws ecr get-login-password --region ${{ secrets.AWS_DEFAULT_REGION }} | docker login --username AWS --password-stdin $(terraform output -raw ecr_repo_url)
 
-      # 6️ Build Docker Image
+      # 6️⃣ Build Docker Image
       - name: Build Docker Image
         run: |
           docker build -t devsecops-demo-app:latest app/
           docker tag devsecops-demo-app:latest $(terraform output -raw ecr_repo_url):latest
 
-      # 7️ Push Docker Image to ECR
+      # 7️⃣ Push Docker Image to ECR
       - name: Push Docker Image
         run: |
           docker push $(terraform output -raw ecr_repo_url):latest
 
-      # 8️ Deploy to EKS
+      # 8️⃣ Configure kubectl for EKS
       - name: Configure kubectl
         run: |
           aws eks update-kubeconfig --name $(terraform output -raw eks_cluster_name) --region ${{ secrets.AWS_DEFAULT_REGION }}
 
+      # 9️⃣ Deploy Kubernetes manifests
       - name: Deploy to Kubernetes
         run: |
           kubectl apply -f manifests/
