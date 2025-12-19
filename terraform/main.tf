@@ -43,25 +43,23 @@ data "aws_subnets" "default" {
 
 module "eks" {
   source  = "terraform-aws-modules/eks/aws"
-  version = "21.10.1"
+  version = "20.31.6"
 
   cluster_name    = "devsecops-demo-eks"
-  cluster_version = "1.30"
+  cluster_version = "1.29"
 
   vpc_id     = data.aws_vpc.default.id
   subnet_ids = data.aws_subnets.default.ids
 
-  eks_managed_node_groups = {
+  managed_node_groups = {
     default = {
+      desired_size = 1
       min_size     = 1
       max_size     = 2
-      desired_size = 1
 
       instance_types = ["t3.medium"]
     }
   }
-
-  enable_cluster_creator_admin_permissions = true
 }
 output "eks_cluster_name" {
   value = module.eks.cluster_name
