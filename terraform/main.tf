@@ -32,50 +32,51 @@ output "ecr_repo_url" {
 }
 
 ################################
-# Networking (Default VPC)
+# Networking
 ################################
 data "aws_vpc" "default" {
   default = true
 }
 
-data "aws_subnets" "default" {
+data "aws_subnets" "private" {
   filter {
     name   = "vpc-id"
     values = [data.aws_vpc.default.id]
   }
+
+  filter {
+    name   = "tag:Name"
+    values = ["default-pvt-sub"]
+  }
 }
 
 ################################
-# EKS Cluster
+# EKS
 ################################
 module "eks" {
   source  = "terraform-aws-modules/eks/aws"
   version = "20.31.6"
 
-  cluster_name    = "devsecops-demo-eks-02"
+  cluster_name    = "devsecops-demo-eks-03"
   cluster_version = "1.29"
 
   vpc_id     = data.aws_vpc.default.id
-  subnet_ids = data.aws_subnets.default.ids
-
-  # REMOVE kms_key_aliases or kms_key_id entirely for AWS-managed key
+  subnet_ids = data.aws_subnets.private.ids
 
   eks_managed_node_groups = {
-
     default = {
       desired_size = 1
       min_size     = 1
       max_size     = 2
-
       instance_types = ["t3.medium"]
 
-      # 🔑 THIS LINE FIXES THE FAILURE
       enable_private_networking = true
     }
   }
 
   enable_cluster_creator_admin_permissions = true
 }
+
 
 ################################
 # Outputs
@@ -87,5 +88,3 @@ output "eks_cluster_name" {
 output "eks_cluster_endpoint" {
   value = module.eks.cluster_endpoint
 }
-
-
