@@ -52,7 +52,7 @@ module "eks" {
   source  = "terraform-aws-modules/eks/aws"
   version = "20.31.6"
 
-  cluster_name    = "devsecops-demo-eks"
+  cluster_name    = "devsecops-demo-eks-02"
   cluster_version = "1.29"
 
   vpc_id     = data.aws_vpc.default.id
@@ -87,4 +87,5 @@ output "eks_cluster_name" {
 output "eks_cluster_endpoint" {
   value = module.eks.cluster_endpoint
 }
+
 
