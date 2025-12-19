@@ -1,5 +1,6 @@
 terraform {
   required_version = ">= 1.3.0"
+
   required_providers {
     aws = {
       source  = "hashicorp/aws"
@@ -16,7 +17,9 @@ variable "aws_region" {
   default = "ap-south-1"
 }
 
+############################
 # ECR Repository
+############################
 resource "aws_ecr_repository" "app" {
   name = "devsecops-demo-app"
 
@@ -29,7 +32,9 @@ output "ecr_repo_url" {
   value = aws_ecr_repository.app.repository_url
 }
 
+############################
 # EKS Cluster
+############################
 data "aws_vpc" "default" {
   default = true
 }
@@ -51,15 +56,20 @@ module "eks" {
   vpc_id     = data.aws_vpc.default.id
   subnet_ids = data.aws_subnets.default.ids
 
-eks_managed_node_groups = {
-  default = {
-    desired_size = 1
-    min_size     = 1
-    max_size     = 2
+  eks_managed_node_groups = {
+    default = {
+      desired_size = 1
+      min_size     = 1
+      max_size     = 2
 
-    instance_types = ["t3.medium"]
+      instance_types = ["t3.medium"]
+    }
   }
 }
+
+############################
+# Outputs
+############################
 output "eks_cluster_name" {
   value = module.eks.cluster_name
 }
@@ -67,4 +77,3 @@ output "eks_cluster_name" {
 output "eks_cluster_endpoint" {
   value = module.eks.cluster_endpoint
 }
-
